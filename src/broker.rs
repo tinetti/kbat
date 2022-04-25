@@ -1,0 +1,108 @@
+use std::io::Write;
+use std::net::{TcpStream, ToSocketAddrs};
+use std::time::Duration;
+
+use crate::error::{Error, Result};
+use crate::model::ClusterMetadata;
+use crate::request::{GetMetadataRequest, Request};
+
+pub struct Broker {
+    pub addr: String,
+    connect_timeout: Duration,
+    connection: Option<Box<TcpStream>>,
+}
+
+impl Broker {
+    pub fn connect(addr: &str, timeout: Duration) -> Result<Broker> {
+        log::debug!("connecting to broker: {}", addr);
+        let mut broker = Broker { addr: String::from(addr), connect_timeout: timeout, connection: None };
+        broker.reconnect()?;
+        Ok(broker)
+    }
+
+    fn reconnect(&mut self) -> Result<()> {
+        let mut last_error = None;
+        let addrs_iter = self.addr.to_socket_addrs()?;
+        for socket_addr in addrs_iter {
+            match TcpStream::connect_timeout(&socket_addr, self.connect_timeout) {
+                Ok(stream) => {
+                    log::debug!("connected to {}", self.addr);
+                    self.connection = Some(Box::new(stream));
+                    return Ok(());
+                }
+                Err(e) => {
+                    log::debug!("error connecting to {}: {}", self.addr, e);
+                    last_error = Some(e.into());
+                }
+            }
+        }
+
+        Err(last_error.unwrap())
+    }
+
+    pub fn get_metadata(&self) -> Result<ClusterMetadata> {
+        let request = GetMetadataRequest {};
+        return self.send_and_receive(request);
+    }
+
+    pub fn close(&mut self) {
+        // let stream = self.stream;
+        match &self.connection.as_deref() {
+            None => None::<()>,
+            Some(mut s) => match s.flush() {
+                Ok(()) => None,
+                Err(e) => {
+                    log::warn!("error closing broker {}: {}", self.addr, e);
+                    None
+                }
+            },
+        };
+        self.connection = None;
+    }
+
+    fn send_and_receive(&self, req: GetMetadataRequest) -> Result<ClusterMetadata> {
+        self.send(req)?;
+        todo!("receive")
+    }
+
+    fn connection(&self) -> Result<&TcpStream> {
+        let conn: &TcpStream;
+        match &self.connection {
+            Some(c) => conn = &c,
+            None => return Err(Error::NotConnected),
+        }
+        Ok(conn)
+    }
+
+    fn send(&self, req: GetMetadataRequest) -> Result<()> {
+        let connection = self.connection.as_ref();
+        let connection = connection.ok_or(Error::NotConnected)?;
+        let mut connection = connection.as_ref();
+        let body = req.into_bytes()?;
+        connection.write(body.as_slice())?;
+        // req.write_to(connection)?;
+        // connection.write_all(buffer.as_ref())?;
+
+        // let c = self.connection()?;
+        // let c = Box::new(c) as Box<dyn Write>;
+        // let mut c = c;
+        // req.write_to(&mut c)?;
+        // match &self.connection {
+        //     None => return Err(Error::NotConnected),
+        //     Some(c) => {
+        //         let c = c.as_ref();
+        //         let c = Box::new(c) as Box<dyn Write>;
+        //         req.write_to(&mut c)?;
+        //     }
+        // }
+        // let mut c = c.as_ref();
+        // let c = c.ok_or(Error::NotConnected)?;
+        // c.write_request_body(&req)?;
+        // let
+        // let connection = &self.connection.ok_or(Error::NotConnected)?;
+        // let mut connection = connection.as_ref();
+        // let req = Box::new(req) as Box<dyn Request>;
+        // connection.write_request_body(&req)?;
+        Ok(())
+    }
+}
