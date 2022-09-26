@@ -1,5 +1,3 @@
-use std::io;
-use std::io::Write;
 
 use byteorder::{BigEndian, WriteBytesExt};
 
@@ -7,19 +5,7 @@ use crate::error::Result;
 
 pub trait Request {
     fn into_bytes(self) -> Result<Vec<u8>>;
-    // fn write_to(self, out: &mut Box<dyn io::Write>) -> Result<()>;
 }
-
-// pub trait RequestBodyWriter: io::Write {
-//     fn write_request_body(&'static mut self, req: &mut Box<dyn Request>) -> Result<()> {
-//         let mut b = Box::new(self) as Box<dyn io::Write>;
-//         req.write_to(&mut b)?;
-//         Ok(())
-//     }
-// }
-//
-// impl<W: io::Write + ?Sized + 'static> RequestBodyWriter for W {}
-
 
 pub struct GetMetadataRequest {}
 

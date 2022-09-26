@@ -75,34 +75,9 @@ impl Broker {
     }
 
     fn send(&self, req: GetMetadataRequest) -> Result<()> {
-        let connection = self.connection.as_ref();
-        let connection = connection.ok_or(Error::NotConnected)?;
-        let mut connection = connection.as_ref();
         let body = req.into_bytes()?;
-        connection.write(body.as_slice())?;
-        // req.write_to(connection)?;
-        // connection.write_all(buffer.as_ref())?;
-
-        // let c = self.connection()?;
-        // let c = Box::new(c) as Box<dyn Write>;
-        // let mut c = c;
-        // req.write_to(&mut c)?;
-        // match &self.connection {
-        //     None => return Err(Error::NotConnected),
-        //     Some(c) => {
-        //         let c = c.as_ref();
-        //         let c = Box::new(c) as Box<dyn Write>;
-        //         req.write_to(&mut c)?;
-        //     }
-        // }
-        // let mut c = c.as_ref();
-        // let c = c.ok_or(Error::NotConnected)?;
-        // c.write_request_body(&req)?;
-        // let
-        // let connection = &self.connection.ok_or(Error::NotConnected)?;
-        // let mut connection = connection.as_ref();
-        // let req = Box::new(req) as Box<dyn Request>;
-        // connection.write_request_body(&req)?;
+        let body = body.as_slice();
+        self.connection()?.write(body)?;
         Ok(())
     }
 }
